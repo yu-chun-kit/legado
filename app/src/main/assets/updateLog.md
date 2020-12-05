@@ -3,14 +3,34 @@
 * 关注合作公众号 **[小说拾遗]** 获取好看的小说。
 * 旧版数据导入教程：先在旧版阅读(2.x)中进行备份，然后在新版阅读(3.x)【我的】->【备份与恢复】，选择【导入旧版本数据】。
 
-**2020/11/22**
-* 正文字体处理规则修改,只能写js,不需要js标记
+**2020/12/05**
+* 添加源订阅功能,订阅界面第一个图标
+
+**2020/12/04**
+* 阅读进度从页数改为字数,排版变化时定位更准确
+* 修改viewBinding
+* 修复中文排序
+* 去掉FontJs规则,可以写在替换规则里,例:f2为正确的字体,根据文字数据去正确的字体里面查找,可以把错误的文字替换为正确的文字
 ```
-var b64=String(result).match(/ttf;base64,([^\)]+)/);
-var f1 = java.queryBase64TTF(b64[1])
-var f2 = java.queryTTF("/storage/emulated/0/Fonts/Source Han Sans CN Regular.ttf")
-java.replaceFont(content, f1, f2, 58000,59000)
+@js:
+var b64=String(src).match(/ttf;base64,([^\)]+)/);
+if (b64) {
+    var f1 = java.queryBase64TTF(b64[1])
+    var f2 = java.queryTTF("/storage/emulated/0/Fonts/Source Han Sans CN Regular.ttf")
+    java.replaceFont(result, f1, f2)
+}else{
+    result
+}
 ```
+
+**2020/11/30**
+* 优化阅读界面设置
+* 阅读界面显示信息添加时间及电量
+* 阅读界面显示信息可以自定义颜色
+* 修复bug
+
+**2020/11/24**
+* 修复音频bug
 
 **2020/11/18**
 * 优化导航栏

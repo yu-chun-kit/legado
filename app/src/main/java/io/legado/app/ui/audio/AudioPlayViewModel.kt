@@ -5,33 +5,38 @@ import android.content.Intent
 import io.legado.app.App
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
+import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.BookHelp
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.help.AudioPlay
+import io.legado.app.utils.postEvent
 import kotlinx.coroutines.Dispatchers
 
 class AudioPlayViewModel(application: Application) : BaseViewModel(application) {
 
-    fun initData(intent: Intent) {
+    fun initData(intent: Intent) = AudioPlay.apply {
         execute {
             val bookUrl = intent.getStringExtra("bookUrl")
-            if (AudioPlay.book?.bookUrl != bookUrl) {
-                AudioPlay.stop(context)
-                AudioPlay.inBookshelf = intent.getBooleanExtra("inBookshelf", true)
-                AudioPlay.book = if (!bookUrl.isNullOrEmpty()) {
+            if (book?.bookUrl != bookUrl) {
+                stop(context)
+                inBookshelf = intent.getBooleanExtra("inBookshelf", true)
+                book = if (!bookUrl.isNullOrEmpty()) {
                     App.db.bookDao().getBook(bookUrl)
                 } else {
                     App.db.bookDao().lastReadBook
                 }
-                AudioPlay.book?.let { book ->
-                    AudioPlay.titleData.postValue(book.name)
-                    AudioPlay.coverData.postValue(book.getDisplayCover())
-                    AudioPlay.durChapterIndex = book.durChapterIndex
-                    AudioPlay.durPageIndex = book.durChapterPos
+                book?.let { book ->
+                    titleData.postValue(book.name)
+                    coverData.postValue(book.getDisplayCover())
+                    durChapterIndex = book.durChapterIndex
+                    durChapterPos = book.durChapterPos
+                    App.db.bookChapterDao().getChapter(book.bookUrl, book.durChapterIndex)?.let {
+                        postEvent(EventBus.AUDIO_SUB_TITLE, it.title)
+                    }
                     App.db.bookSourceDao().getBookSource(book.origin)?.let {
-                        AudioPlay.webBook = WebBook(it)
+                        webBook = WebBook(it)
                     }
                     val count = App.db.bookChapterDao().getChapterCount(book.bookUrl)
                     if (count == 0) {
@@ -41,10 +46,10 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
                             loadChapterList(book)
                         }
                     } else {
-                        if (AudioPlay.durChapterIndex > count - 1) {
-                            AudioPlay.durChapterIndex = count - 1
+                        if (durChapterIndex > count - 1) {
+                            durChapterIndex = count - 1
                         }
-                        AudioPlay.chapterSize = count
+                        chapterSize = count
                     }
                 }
                 saveRead()
@@ -125,21 +130,6 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
             App.db.bookDao().update(book)
             App.db.bookChapterDao().insert(*chapters.toTypedArray())
             AudioPlay.chapterSize = chapters.size
-        }
-    }
-
-    fun saveRead() {
-        execute {
-            AudioPlay.book?.let { book ->
-                book.lastCheckCount = 0
-                book.durChapterTime = System.currentTimeMillis()
-                book.durChapterIndex = AudioPlay.durChapterIndex
-                book.durChapterPos = AudioPlay.durPageIndex
-                App.db.bookChapterDao().getChapter(book.bookUrl, book.durChapterIndex)?.let {
-                    book.durChapterTitle = it.title
-                }
-                App.db.bookDao().update(book)
-            }
         }
     }
 
