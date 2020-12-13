@@ -10,7 +10,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ActivityWelcomeBinding
 import io.legado.app.help.AppConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.storage.SyncBookProgress
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.main.MainActivity
@@ -37,10 +36,10 @@ open class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
 
     private fun init() {
         Coroutine.async {
-            App.db.cacheDao().clearDeadline(System.currentTimeMillis())
+            App.db.cacheDao.clearDeadline(System.currentTimeMillis())
             //清除过期数据
             if (getPrefBoolean(PreferKey.autoClearExpired, true)) {
-                App.db.searchBookDao()
+                App.db.searchBookDao
                     .clearExpired(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1))
             }
             //初始化简繁转换引擎
@@ -50,7 +49,6 @@ open class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
                 else -> null
             }
         }
-        SyncBookProgress.downloadBookProgress()
         binding.root.postDelayed({ startMainActivity() }, 500)
     }
 

@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.anko.sdk27.listeners.onClick
 import org.jetbrains.anko.startActivity
-import java.text.Collator
 
 
 class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel>(),
@@ -187,7 +186,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     }
 
     private fun initLiveData() {
-        App.db.bookSourceDao().liveGroupEnabled().observe(this, {
+        App.db.bookSourceDao.liveGroupEnabled().observe(this, {
             groups.clear()
             it.map { group ->
                 groups.addAll(group.splitNotBlank(AppPattern.splitGroupRegex))
@@ -245,13 +244,14 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         if (selectedGroup == "") {
             item?.isChecked = true
         }
-        groups.sortedWith(Collator.getInstance(java.util.Locale.CHINESE))
-            .map {
-                item = menu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
-                if (it == selectedGroup) {
-                    item?.isChecked = true
-                }
+        groups.sortedWith { o1, o2 ->
+            o1.cnCompare(o2)
+        }.map {
+            item = menu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
+            if (it == selectedGroup) {
+                item?.isChecked = true
             }
+        }
         menu?.setGroupCheckable(R.id.source_group, true, true)
     }
 
@@ -264,7 +264,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
             binding.tvBookShow.gone()
             binding.rvBookshelfSearch.gone()
         } else {
-            bookData = App.db.bookDao().liveDataSearch(key)
+            bookData = App.db.bookDao.liveDataSearch(key)
             bookData?.observe(this, {
                 if (it.isEmpty()) {
                     binding.tvBookShow.gone()
@@ -279,9 +279,9 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         historyData?.removeObservers(this)
         historyData =
             if (key.isNullOrBlank()) {
-                App.db.searchKeywordDao().liveDataByUsage()
+                App.db.searchKeywordDao.liveDataByUsage()
             } else {
-                App.db.searchKeywordDao().liveDataSearch(key)
+                App.db.searchKeywordDao.liveDataSearch(key)
             }
         historyData?.observe(this, {
             historyKeyAdapter.setItems(it)
@@ -351,7 +351,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
                 serchView.query.toString() == key -> {
                     serchView.setQuery(key, true)
                 }
-                withContext(IO) { App.db.bookDao().findByName(key).isEmpty() } -> {
+                withContext(IO) { App.db.bookDao.findByName(key).isEmpty() } -> {
                     serchView.setQuery(key, true)
                 }
                 else -> {

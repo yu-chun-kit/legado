@@ -8,6 +8,7 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.ViewGroup
@@ -40,6 +41,9 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
     private val adapter = Adapter(context)
     private val menu = MenuBuilder(context)
     private val moreMenu = MenuBuilder(context)
+    private val ttsListener by lazy {
+        TTSUtteranceListener()
+    }
 
     init {
         @SuppressLint("InflateParams")
@@ -51,37 +55,35 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
 
         initRecyclerView()
         setOnDismissListener {
-            contentView.apply {
-                binding.ivMenuMore.setImageResource(R.drawable.ic_more_vert)
-                binding.recyclerViewMore.gone()
-                adapter.setItems(menu.visibleItems)
-                binding.recyclerView.visible()
-            }
+            binding.ivMenuMore.setImageResource(R.drawable.ic_more_vert)
+            binding.recyclerViewMore.gone()
+            adapter.setItems(menu.visibleItems)
+            binding.recyclerView.visible()
         }
     }
 
-    private fun initRecyclerView() = with(contentView) {
-        binding.recyclerView.adapter = adapter
-        binding.recyclerViewMore.adapter = adapter
+    private fun initRecyclerView() = with(binding) {
+        recyclerView.adapter = adapter
+        recyclerViewMore.adapter = adapter
         SupportMenuInflater(context).inflate(R.menu.content_select_action, menu)
         adapter.setItems(menu.visibleItems)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             onInitializeMenu(moreMenu)
         }
         if (moreMenu.size() > 0) {
-            binding.ivMenuMore.visible()
+            ivMenuMore.visible()
         }
-        binding.ivMenuMore.onClick {
-            if (binding.recyclerView.isVisible) {
-                binding.ivMenuMore.setImageResource(R.drawable.ic_arrow_back)
+        ivMenuMore.onClick {
+            if (recyclerView.isVisible) {
+                ivMenuMore.setImageResource(R.drawable.ic_arrow_back)
                 adapter.setItems(moreMenu.visibleItems)
-                binding.recyclerView.gone()
-                binding.recyclerViewMore.visible()
+                recyclerView.gone()
+                recyclerViewMore.visible()
             } else {
-                binding.ivMenuMore.setImageResource(R.drawable.ic_more_vert)
-                binding.recyclerViewMore.gone()
+                ivMenuMore.setImageResource(R.drawable.ic_more_vert)
+                recyclerViewMore.gone()
                 adapter.setItems(menu.visibleItems)
-                binding.recyclerView.visible()
+                recyclerView.visible()
             }
         }
     }
@@ -161,7 +163,9 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
     private fun readAloud(text: String) {
         lastText = text
         if (textToSpeech == null) {
-            textToSpeech = TextToSpeech(context, this)
+            textToSpeech = TextToSpeech(context, this).apply {
+                setOnUtteranceProgressListener(ttsListener)
+            }
             return
         }
         if (!ttsInitFinish) return
@@ -216,6 +220,22 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
             }
         } catch (e: Exception) {
             context.toast("获取文字操作菜单出错:${e.localizedMessage}")
+        }
+    }
+
+    private inner class TTSUtteranceListener : UtteranceProgressListener() {
+
+        override fun onStart(utteranceId: String?) {
+
+        }
+
+        override fun onDone(utteranceId: String?) {
+            textToSpeech?.shutdown()
+            textToSpeech = null
+        }
+
+        override fun onError(utteranceId: String?) {
+
         }
     }
 

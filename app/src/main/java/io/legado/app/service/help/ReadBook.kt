@@ -4,10 +4,7 @@ import androidx.lifecycle.MutableLiveData
 import com.hankcs.hanlp.HanLP
 import io.legado.app.App
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.*
 import io.legado.app.help.*
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
@@ -48,14 +45,12 @@ object ReadBook {
         this.book = book
         contentProcessor = ContentProcessor(book.name, book.origin)
         readRecord.bookName = book.name
-        readRecord.readTime = App.db.readRecordDao().getReadTime(book.name) ?: 0
+        readRecord.readTime = App.db.readRecordDao.getReadTime(book.name) ?: 0
         durChapterIndex = book.durChapterIndex
         durChapterPos = book.durChapterPos
         isLocalBook = book.origin == BookType.local
-        chapterSize = 0
-        prevTextChapter = null
-        curTextChapter = null
-        nextTextChapter = null
+        chapterSize = book.totalChapterNum
+        clearTextChapter()
         titleDate.postValue(book.name)
         callBack?.upPageAnim()
         upWebBook(book)
@@ -70,7 +65,7 @@ object ReadBook {
             bookSource = null
             webBook = null
         } else {
-            App.db.bookSourceDao().getBookSource(book.origin)?.let {
+            App.db.bookSourceDao.getBookSource(book.origin)?.let {
                 bookSource = it
                 webBook = WebBook(it)
             } ?: let {
@@ -80,11 +75,24 @@ object ReadBook {
         }
     }
 
+    fun upProgress(progress: BookProgress) {
+        durChapterIndex = progress.durChapterIndex
+        durChapterPos = progress.durChapterPos
+        clearTextChapter()
+        loadContent(resetPageOffset = true)
+    }
+
+    fun clearTextChapter() {
+        prevTextChapter = null
+        curTextChapter = null
+        nextTextChapter = null
+    }
+
     fun upReadStartTime() {
         Coroutine.async {
             readRecord.readTime = readRecord.readTime + System.currentTimeMillis() - readStartTime
             readStartTime = System.currentTimeMillis()
-            App.db.readRecordDao().insert(readRecord)
+            App.db.readRecordDao.insert(readRecord)
         }
     }
 
@@ -228,7 +236,7 @@ object ReadBook {
         book?.let { book ->
             if (addLoading(index)) {
                 Coroutine.async {
-                    App.db.bookChapterDao().getChapter(book.bookUrl, index)?.let { chapter ->
+                    App.db.bookChapterDao.getChapter(book.bookUrl, index)?.let { chapter ->
                         BookHelp.getContent(book, chapter)?.let {
                             contentLoadFinish(book, chapter, it, upContent, resetPageOffset)
                             removeLoading(chapter.index)
@@ -246,7 +254,7 @@ object ReadBook {
             if (book.isLocalBook()) return
             if (addLoading(index)) {
                 Coroutine.async {
-                    App.db.bookChapterDao().getChapter(book.bookUrl, index)?.let { chapter ->
+                    App.db.bookChapterDao.getChapter(book.bookUrl, index)?.let { chapter ->
                         if (BookHelp.hasContent(book, chapter)) {
                             removeLoading(chapter.index)
                         } else {
@@ -428,10 +436,10 @@ object ReadBook {
                 book.durChapterTime = System.currentTimeMillis()
                 book.durChapterIndex = durChapterIndex
                 book.durChapterPos = durChapterPos
-                App.db.bookChapterDao().getChapter(book.bookUrl, durChapterIndex)?.let {
+                App.db.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)?.let {
                     book.durChapterTitle = it.title
                 }
-                App.db.bookDao().update(book)
+                App.db.bookDao.update(book)
             }
         }
     }

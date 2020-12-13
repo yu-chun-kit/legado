@@ -150,6 +150,7 @@
     <string name="set_timer">定時</string>
     <string name="read_aloud_pause">朗讀暫停</string>
     <string name="read_aloud_timer">正在朗讀(還剩%d分鐘)</string>
+    <string name="playing_timer">正在朗播放(還剩%d分鐘)</string>
     <string name="ps_hide_navigation_bar">閱讀介面隱藏虛擬按鍵</string>
     <string name="pt_hide_navigation_bar">隱藏導航欄</string>
     <string name="re_navigation_bar_color">導航欄顏色</string>
@@ -361,8 +362,8 @@
     <string name="finish_book">完結書籍</string>
     <string name="local_book">本機書籍</string>
     <string name="status_bar_immersion">狀態欄顏色透明</string>
-    <string name="navigation_bar_color_change">導航欄變色</string>
-    <string name="navigation_bar_color_change_s">導航欄根據夜間模式變化</string>
+    <string name="imm_navigation_bar">沉浸式导航栏</string>
+    <string name="imm_navigation_bar_s">导航栏颜色透明</string>
     <string name="add_to_shelf">放入書架</string>
     <string name="continue_read">繼續閱讀</string>
     <string name="cover_path">封面地址</string>
@@ -594,8 +595,6 @@
     <string name="change_cover_source">封面換源</string>
     <string name="select_local_image">選擇本機圖片</string>
     <string name="book_type">類型:</string>
-    <string name="book_type_text">文字</string>
-    <string name="book_type_audio">音訊</string>
     <string name="to_backstage">後台</string>
     <string name="importing">正在匯入</string>
     <string name="exporting">正在匯出</string>
@@ -764,7 +763,7 @@
     <string name="theme_list">主題列表</string>
     <string name="theme_list_summary">使用儲存主題,匯入,分享主題</string>
     <string name="select_theme">切換預設主題</string>
-    <string name="share_selected_source">分享選中書源</string>
+    <string name="share_selected_source">分享選中源</string>
     <string name="sort_by_lastUpdateTime">時間排序</string>
     <string name="search_content">全文搜尋</string>
     <string name="rss_source_empty">關注公眾號[开源阅读]獲取訂閱源!</string>
@@ -789,6 +788,8 @@
     <string name="show_hide">显示/隐藏</string>
     <string name="header_footer">页眉<![CDATA[&]]>页脚</string>
     <string name="rule_subscription">规则订阅</string>
-    <string name="rule_sub_empty_msg">添加大佬们提供的源导入地址,添加后点击可导入源</string>
+    <string name="rule_sub_empty_msg">添加大佬们提供的规则导入地址\n添加后点击可导入规则</string>
+    <string name="get_book_progress">拉取云端进度</string>
+    <string name="current_progress_exceeds_cloud">当前进度超过云端进度,是否同步?</string>
 
 </resources>

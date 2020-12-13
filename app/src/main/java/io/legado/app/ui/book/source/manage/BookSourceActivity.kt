@@ -44,7 +44,6 @@ import org.jetbrains.anko.startActivity
 import org.jetbrains.anko.startActivityForResult
 import org.jetbrains.anko.toast
 import java.io.File
-import java.text.Collator
 
 class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceViewModel>(),
     PopupMenu.OnMenuItemClickListener,
@@ -78,7 +77,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         initLiveDataBookSource()
         initLiveDataGroup()
         initSelectActionBar()
-        if (LocalConfig.isFirstOpenBookSources) {
+        if (!LocalConfig.bookSourcesHelpVersionIsLast) {
             showHelp()
         }
     }
@@ -176,16 +175,16 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         bookSourceLiveDate?.removeObservers(this)
         bookSourceLiveDate = when {
             searchKey.isNullOrEmpty() -> {
-                App.db.bookSourceDao().liveDataAll()
+                App.db.bookSourceDao.liveDataAll()
             }
             searchKey == getString(R.string.enabled) -> {
-                App.db.bookSourceDao().liveDataEnabled()
+                App.db.bookSourceDao.liveDataEnabled()
             }
             searchKey == getString(R.string.disabled) -> {
-                App.db.bookSourceDao().liveDataDisabled()
+                App.db.bookSourceDao.liveDataDisabled()
             }
             else -> {
-                App.db.bookSourceDao().liveDataSearch("%$searchKey%")
+                App.db.bookSourceDao.liveDataSearch("%$searchKey%")
             }
         }
         bookSourceLiveDate?.observe(this, { data ->
@@ -216,7 +215,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     }
 
     private fun showHelp() {
-        val text = String(assets.open("help/bookSourcesHelp.md").readBytes())
+        val text = String(assets.open("help/SourceMBookHelp.md").readBytes())
         TextDialog.show(supportFragmentManager, text, TextDialog.MD)
     }
 
@@ -230,7 +229,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     }
 
     private fun initLiveDataGroup() {
-        App.db.bookSourceDao().liveGroup().observe(this, {
+        App.db.bookSourceDao.liveGroup().observe(this, {
             groups.clear()
             it.map { group ->
                 groups.addAll(group.splitNotBlank(AppPattern.splitGroupRegex))
@@ -342,10 +341,11 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     private fun upGroupMenu() {
         groupMenu?.removeGroup(R.id.source_group)
-        groups.sortedWith(Collator.getInstance(java.util.Locale.CHINESE))
-            .map {
-                groupMenu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
-            }
+        groups.sortedWith { o1, o2 ->
+            o1.cnCompare(o2)
+        }.map {
+            groupMenu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
+        }
     }
 
     @SuppressLint("InflateParams")

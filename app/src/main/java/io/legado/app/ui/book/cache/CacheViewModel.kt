@@ -11,7 +11,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.Book
 import io.legado.app.help.BookHelp
 import io.legado.app.help.ContentProcessor
-import io.legado.app.help.storage.WebDavHelp
+import io.legado.app.help.storage.BookWebDav
 import io.legado.app.utils.*
 import java.io.File
 
@@ -47,7 +47,7 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
                 filename
             ).writeText(content) // 写出文件到cache目录
             // 导出到webdav
-            WebDavHelp.exportWebDav(FileUtils.getCachePath(), filename)
+            BookWebDav.exportWebDav(FileUtils.getCachePath(), filename)
             // 上传完删除cache文件
             FileUtils.deleteFile("${FileUtils.getCachePath()}${File.separator}${filename}")
         }
@@ -68,7 +68,7 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
         FileUtils.createFileIfNotExist(file, filename)
             .writeText(getAllContents(book))
         if (App.INSTANCE.getPrefBoolean(PreferKey.webDavCacheBackup, false)) {
-            WebDavHelp.exportWebDav(file.absolutePath, filename) // 导出到webdav
+            BookWebDav.exportWebDav(file.absolutePath, filename) // 导出到webdav
         }
         getSrcList(book).forEach {
             val vFile = BookHelp.getImage(book, it.third)
@@ -90,7 +90,7 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
         stringBuilder.append(book.name)
             .append("\n")
             .append(context.getString(R.string.author_show, book.author))
-        App.db.bookChapterDao().getChapterList(book.bookUrl).forEach { chapter ->
+        App.db.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
             BookHelp.getContent(book, chapter).let { content ->
                 val content1 = contentProcessor
                     .getContent(book, chapter.title, content ?: "null", false)
@@ -104,14 +104,13 @@ class CacheViewModel(application: Application) : BaseViewModel(application) {
 
     private fun getSrcList(book: Book): ArrayList<Triple<String, Int, String>> {
         val srcList = arrayListOf<Triple<String, Int, String>>()
-        App.db.bookChapterDao().getChapterList(book.bookUrl).forEach { chapter ->
+        App.db.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
             BookHelp.getContent(book, chapter)?.let { content ->
                 content.split("\n").forEachIndexed { index, text ->
                     val matcher = AppPattern.imgPattern.matcher(text)
                     if (matcher.find()) {
-                        var src = matcher.group(1)
-                        src = NetworkUtils.getAbsoluteURL(chapter.url, src)
-                        src?.let {
+                        matcher.group(1)?.let {
+                            val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
                             srcList.add(Triple(chapter.title, index, src))
                         }
                     }

@@ -31,6 +31,7 @@ import io.legado.app.ui.filepicker.FilePickerDialog
 import io.legado.app.ui.qrcode.QrCodeActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.widget.SelectActionBar
+import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.ui.widget.recycler.VerticalDivider
@@ -39,8 +40,6 @@ import org.jetbrains.anko.startActivity
 import org.jetbrains.anko.startActivityForResult
 import org.jetbrains.anko.toast
 import java.io.File
-import java.text.Collator
-import java.util.*
 
 
 class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceViewModel>(),
@@ -92,6 +91,10 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
             R.id.menu_import_source_qr -> startActivityForResult<QrCodeActivity>(qrRequestCode)
             R.id.menu_group_manage -> GroupManageDialog()
                 .show(supportFragmentManager, "rssGroupManage")
+            R.id.menu_share_source -> viewModel.shareSelection(adapter.getSelection()) {
+                startActivity(Intent.createChooser(it, getString(R.string.share_selected_source)))
+            }
+            R.id.menu_help -> showHelp()
             else -> if (item.groupId == R.id.source_group) {
                 binding.titleBar.findViewById<SearchView>(R.id.search_view)
                     .setQuery(item.title, true)
@@ -151,7 +154,7 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
     }
 
     private fun initLiveDataGroup() {
-        App.db.rssSourceDao().liveGroup().observe(this, {
+        App.db.rssSourceDao.liveGroup().observe(this, {
             groups.clear()
             it.map { group ->
                 groups.addAll(group.splitNotBlank(AppPattern.splitGroupRegex))
@@ -192,19 +195,20 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
 
     private fun upGroupMenu() {
         groupMenu?.removeGroup(R.id.source_group)
-        groups.sortedWith(Collator.getInstance(Locale.CHINESE))
-            .map {
-                groupMenu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
-            }
+        groups.sortedWith { o1, o2 ->
+            o1.cnCompare(o2)
+        }.map {
+            groupMenu?.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
+        }
     }
 
     private fun initLiveDataSource(key: String? = null) {
         sourceLiveData?.removeObservers(this)
         sourceLiveData =
             if (key.isNullOrBlank()) {
-                App.db.rssSourceDao().liveAll()
+                App.db.rssSourceDao.liveAll()
             } else {
-                App.db.rssSourceDao().liveSearch("%$key%")
+                App.db.rssSourceDao.liveSearch("%$key%")
             }
         sourceLiveData?.observe(this, {
             val diffResult = DiffUtil
@@ -212,6 +216,11 @@ class RssSourceActivity : VMBaseActivity<ActivityRssSourceBinding, RssSourceView
             adapter.setItems(it, diffResult)
             upCountView()
         })
+    }
+
+    private fun showHelp() {
+        val text = String(assets.open("help/SourceMRssHelp.md").readBytes())
+        TextDialog.show(supportFragmentManager, text, TextDialog.MD)
     }
 
     override fun upCountView() {

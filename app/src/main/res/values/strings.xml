@@ -153,6 +153,7 @@
     <string name="set_timer">Timer</string>
     <string name="read_aloud_pause">Speak Paused</string>
     <string name="read_aloud_timer">Speaking(%d min left)</string>
+    <string name="playing_timer">Playing(%d min left)</string>
     <string name="ps_hide_navigation_bar">Hide virtual buttons when reading</string>
     <string name="pt_hide_navigation_bar">Hide navigation bar</string>
     <string name="re_navigation_bar_color">Navigation bar color</string>
@@ -364,8 +365,8 @@
     <string name="finish_book">Finished books</string>
     <string name="local_book">Local books</string>
     <string name="status_bar_immersion">The status bar color becomes transparent</string>
-    <string name="navigation_bar_color_change">Discolored navigation bar</string>
-    <string name="navigation_bar_color_change_s">The navigation bar changes color following the dark mode</string>
+    <string name="imm_navigation_bar">immersion navigation bar</string>
+    <string name="imm_navigation_bar_s">The navigation bar becomes transparent</string>
     <string name="add_to_shelf">Add to Bookshelf</string>
     <string name="continue_read">Continue reading</string>
     <string name="cover_path">Cover path</string>
@@ -603,8 +604,6 @@
     <string name="change_cover_source">Change origin</string>
     <string name="select_local_image">Local image</string>
     <string name="book_type">Type:</string>
-    <string name="book_type_text">Text</string>
-    <string name="book_type_audio">Audio</string>
     <string name="to_backstage">Background</string>
     <string name="importing">Importing</string>
     <string name="exporting">Exporting</string>
@@ -795,6 +794,8 @@
     <string name="show_hide">显示/隐藏</string>
     <string name="header_footer">footer <![CDATA[&]]> header</string>
     <string name="rule_subscription">规则订阅</string>
-    <string name="rule_sub_empty_msg">添加大佬们提供的源导入地址,添加后点击可导入源</string>
+    <string name="rule_sub_empty_msg">添加大佬们提供的规则导入地址\n添加后点击可导入规则</string>
+    <string name="get_book_progress">拉取云端进度</string>
+    <string name="current_progress_exceeds_cloud">当前进度超过云端进度,是否同步?</string>
 
 </resources>
