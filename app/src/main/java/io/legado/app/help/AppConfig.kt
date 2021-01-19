@@ -79,8 +79,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val immNavigationBar: Boolean
         get() = context.getPrefBoolean(PreferKey.immNavigationBar, true)
 
-    val screenDirection: String?
-        get() = context.getPrefString(PreferKey.screenDirection)
+    val screenOrientation: String?
+        get() = context.getPrefString(PreferKey.screenOrientation)
 
     var backupPath: String?
         get() = context.getPrefString(PreferKey.backupPath)
@@ -146,6 +146,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val changeSourceLoadToc get() = context.getPrefBoolean(PreferKey.changeSourceLoadToc)
 
     val importKeepName get() = context.getPrefBoolean(PreferKey.importKeepName)
+
+    val syncBookProgress get() = context.getPrefBoolean(PreferKey.syncBookProgress, true)
+
+    val preDownload get() = context.getPrefBoolean(PreferKey.preDownload, true)
 
     private fun getPrefUserAgent(): String {
         val ua = context.getPrefString(PreferKey.userAgent)

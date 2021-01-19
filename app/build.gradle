@@ -97,6 +97,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    buildToolsVersion '30.0.3'
 }
 
 resourcePlaceholders {
@@ -169,12 +170,12 @@ dependencies {
     implementation 'com.jayway.jsonpath:json-path:2.5.0'
 
     //JS rhino
-    implementation 'com.github.gedoor:rhino-android:1.4'
+    implementation 'com.github.gedoor:rhino-android:1.5'
 
     //网络
     implementation 'com.squareup.okhttp3:okhttp:4.9.0'
-    implementation 'com.ljx.rxhttp:rxhttp:2.4.4-beta3'
-    kapt 'com.ljx.rxhttp:rxhttp-compiler:2.4.4-beta3'
+    implementation 'com.ljx.rxhttp:rxhttp:2.5.3'
+    kapt 'com.ljx.rxhttp:rxhttp-compiler:2.5.3'
 
     //Glide
     implementation 'com.github.bumptech.glide:glide:4.11.0'
@@ -195,6 +196,8 @@ dependencies {
     //MarkDown
     implementation 'io.noties.markwon:core:4.6.0'
     implementation 'io.noties.markwon:image-glide:4.6.0'
+    implementation 'io.noties.markwon:ext-tables:4.6.0'
+    implementation 'io.noties.markwon:html:4.6.0'
 
     //转换繁体
     implementation 'com.hankcs:hanlp:portable-1.7.8'

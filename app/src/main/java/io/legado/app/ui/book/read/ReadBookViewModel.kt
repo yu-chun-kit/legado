@@ -2,23 +2,23 @@ package io.legado.app.ui.book.read
 
 import android.app.Application
 import android.content.Intent
-import androidx.lifecycle.MutableLiveData
 import io.legado.app.App
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
-import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.AppConfig
 import io.legado.app.help.BookHelp
 import io.legado.app.help.IntentDataHelp
 import io.legado.app.help.storage.BookWebDav
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.webBook.PreciseSearch
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.help.ReadAloud
 import io.legado.app.service.help.ReadBook
+import io.legado.app.utils.msg
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.withContext
@@ -26,7 +26,6 @@ import kotlinx.coroutines.withContext
 class ReadBookViewModel(application: Application) : BaseViewModel(application) {
     var isInitFinish = false
     var searchContentQuery = ""
-    val processLiveData = MutableLiveData<BookProgress>()
 
     fun initData(intent: Intent) {
         execute {
@@ -112,7 +111,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         if (book.isLocalBook()) {
             loadChapterList(book, changeDruChapterIndex)
         } else {
-            ReadBook.webBook?.getBookInfo(book, this, canReName = false)
+            ReadBook.webBook?.getBookInfo(this, book, canReName = false)
                 ?.onSuccess {
                     loadChapterList(book, changeDruChapterIndex)
                 }
@@ -141,7 +140,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                 ReadBook.upMsg("LoadTocError:${it.localizedMessage}")
             }
         } else {
-            ReadBook.webBook?.getChapterList(book, this)
+            ReadBook.webBook?.getChapterList(this, book)
                 ?.onSuccess(IO) { cList ->
                     if (cList.isNotEmpty()) {
                         if (changeDruChapterIndex == null) {
@@ -162,18 +161,25 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun syncBookProgress(book: Book) {
-        execute {
-            BookWebDav.getBookProgress(book)?.let { progress ->
-                if (progress.durChapterIndex < book.durChapterIndex ||
-                    (progress.durChapterIndex == book.durChapterIndex && progress.durChapterPos < book.durChapterPos)
-                ) {
-                    processLiveData.postValue(progress)
-                } else {
-                    ReadBook.upProgress(progress)
+    fun syncBookProgress(
+        book: Book,
+        syncBookProgress: Boolean = AppConfig.syncBookProgress,
+        alertSync: ((progress: BookProgress) -> Unit)? = null
+    ) {
+        if (syncBookProgress)
+            execute {
+                BookWebDav.getBookProgress(book)
+            }.onSuccess {
+                it?.let { progress ->
+                    if (progress.durChapterIndex < book.durChapterIndex ||
+                        (progress.durChapterIndex == book.durChapterIndex && progress.durChapterPos < book.durChapterPos)
+                    ) {
+                        alertSync?.invoke(progress)
+                    } else {
+                        ReadBook.setProgress(progress)
+                    }
                 }
             }
-        }
     }
 
     fun changeTo(newBook: Book) {
@@ -209,25 +215,18 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
     private fun autoChangeSource(name: String, author: String) {
         if (!AppConfig.autoChangeSource) return
         execute {
-            App.db.bookSourceDao.allTextEnabled.forEach { source ->
-                try {
-                    val variableBook = SearchBook()
-                    WebBook(source)
-                        .searchBookSuspend(this, name, variableBook = variableBook)
-                        .getOrNull(0)?.let {
-                            if (it.name == name && (it.author == author || author == "")) {
-                                val book = it.toBook()
-                                book.upInfoFromOld(ReadBook.book)
-                                changeTo(book)
-                                return@execute
-                            }
-                        }
-                } catch (e: Exception) {
-                    //nothing
-                }
+            val sources = App.db.bookSourceDao.allTextEnabled
+            val book = PreciseSearch.searchFirstBook(this, sources, name, author)
+            if (book != null) {
+                book.upInfoFromOld(ReadBook.book)
+                changeTo(book)
+            } else {
+                throw Exception("自动换源失败")
             }
         }.onStart {
             ReadBook.upMsg(context.getString(R.string.source_auto_changing))
+        }.onError {
+            toast(it.msg)
         }.onFinally {
             ReadBook.upMsg(null)
         }
@@ -251,7 +250,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun openChapter(index: Int, durChapterPos: Int = 0) {
+    fun openChapter(index: Int, durChapterPos: Int = 0, success: (() -> Unit)? = null) {
         ReadBook.prevTextChapter = null
         ReadBook.curTextChapter = null
         ReadBook.nextTextChapter = null
@@ -261,7 +260,9 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
             ReadBook.durChapterPos = durChapterPos
         }
         ReadBook.saveRead()
-        ReadBook.loadContent(resetPageOffset = true)
+        ReadBook.loadContent(resetPageOffset = true) {
+            success?.invoke()
+        }
     }
 
     fun removeFromBookshelf(success: (() -> Unit)?) {
@@ -272,13 +273,15 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun upBookSource() {
+    fun upBookSource(success: (() -> Unit)?) {
         execute {
             ReadBook.book?.let { book ->
                 App.db.bookSourceDao.getBookSource(book.origin)?.let {
                     ReadBook.webBook = WebBook(it)
                 }
             }
+        }.onSuccess {
+            success?.invoke()
         }
     }
 

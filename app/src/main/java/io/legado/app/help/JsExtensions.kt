@@ -29,13 +29,15 @@ interface JsExtensions {
      * 访问网络,返回String
      */
     fun ajax(urlStr: String): String? {
-        return try {
-            val analyzeUrl = AnalyzeUrl(urlStr)
-            runBlocking {
+        return runBlocking {
+            kotlin.runCatching {
+                val analyzeUrl = AnalyzeUrl(urlStr)
                 analyzeUrl.getStrResponse(urlStr).body
+            }.onFailure {
+                it.printStackTrace()
+            }.getOrElse {
+                it.msg
             }
-        } catch (e: Exception) {
-            e.msg
         }
     }
 
@@ -43,21 +45,23 @@ interface JsExtensions {
      * 访问网络,返回Response<String>
      */
     fun connect(urlStr: String): Any {
-        return try {
-            val analyzeUrl = AnalyzeUrl(urlStr)
-            runBlocking {
+        return runBlocking {
+            kotlin.runCatching {
+                val analyzeUrl = AnalyzeUrl(urlStr)
                 analyzeUrl.getStrResponse(urlStr)
+            }.onFailure {
+                it.printStackTrace()
+            }.getOrElse {
+                it.msg
             }
-        } catch (e: Exception) {
-            e.msg
         }
     }
 
     /**
-     * 实现文件下载,返回路径
+     * 实现16进制字符串转文件
      */
     fun downloadFile(content: String, url: String): String {
-        val type = AnalyzeUrl(url).type ?: return "type为空，未下载"
+        val type = AnalyzeUrl(url).type ?: return ""
         val zipPath = FileUtils.getPath(
             FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),
             "${MD5Utils.md5Encode16(url)}.${type}"
@@ -65,7 +69,7 @@ interface JsExtensions {
         FileUtils.deleteFile(zipPath)
         val zipFile = FileUtils.createFileIfNotExist(zipPath)
         StringUtils.hexStringToByte(content).let {
-            if (it != null) {
+            if (it.isNotEmpty()) {
                 zipFile.writeBytes(it)
             }
         }
@@ -76,6 +80,7 @@ interface JsExtensions {
      * js实现压缩文件解压
      */
     fun unzipFile(zipPath: String): String {
+        if (zipPath.isEmpty()) return ""
         val unzipPath = FileUtils.getPath(
             FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),
             FileUtils.getNameExcludeExtension(zipPath)
@@ -92,6 +97,7 @@ interface JsExtensions {
      * js实现文件夹内所有文件读取
      */
     fun getTxtInFolder(unzipPath: String): String {
+        if (unzipPath.isEmpty()) return ""
         val unzipFolder = FileUtils.createFolderIfNotExist(unzipPath)
         val contents = StringBuilder()
         unzipFolder.listFiles().let {
@@ -109,7 +115,7 @@ interface JsExtensions {
     }
 
     /**
-     * js实现重定向拦截,不能删
+     * js实现重定向拦截,网络访问get
      */
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
         return Jsoup.connect(urlStr)
@@ -277,9 +283,9 @@ interface JsExtensions {
         val contentArray = text.toCharArray()
         contentArray.forEachIndexed { index, s ->
             val oldCode = s.toInt()
-            if (font1.InLimit(s)) {
-                val code = font2.GetCodeByGlyf(font1.GetGlyfByCode(oldCode))
-                if(code != 0) contentArray[index] = code.toChar()
+            if (font1.inLimit(s)) {
+                val code = font2.getCodeByGlyf(font1.getGlyfByCode(oldCode))
+                if (code != 0) contentArray[index] = code.toChar()
             }
         }
         return contentArray.joinToString("")

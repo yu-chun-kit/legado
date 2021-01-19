@@ -97,7 +97,7 @@ class ExploreFragment : VMBaseFragment<ExploreViewModel>(R.layout.fragment_explo
 
     private fun initGroupData() {
         liveGroup?.removeObservers(viewLifecycleOwner)
-        liveGroup = App.db.bookSourceDao.liveGroupExplore()
+        liveGroup = App.db.bookSourceDao.liveExploreGroup()
         liveGroup?.observe(viewLifecycleOwner, {
             groups.clear()
             it.map { group ->
@@ -107,12 +107,19 @@ class ExploreFragment : VMBaseFragment<ExploreViewModel>(R.layout.fragment_explo
         })
     }
 
-    private fun initExploreData(key: String? = null) {
+    private fun initExploreData(searchKey: String? = null) {
         liveExplore?.removeObservers(viewLifecycleOwner)
-        liveExplore = if (key.isNullOrBlank()) {
-            App.db.bookSourceDao.liveExplore()
-        } else {
-            App.db.bookSourceDao.liveExplore("%$key%")
+        liveExplore = when {
+            searchKey.isNullOrBlank() -> {
+                App.db.bookSourceDao.liveExplore()
+            }
+            searchKey.startsWith("group:") -> {
+                val key = searchKey.substringAfter("group:")
+                App.db.bookSourceDao.liveGroupExplore("%$key%")
+            }
+            else -> {
+                App.db.bookSourceDao.liveExplore("%$searchKey%")
+            }
         }
         liveExplore?.observe(viewLifecycleOwner, {
             binding.tvEmptyMsg.isGone = it.isNotEmpty() || searchView.query.isNotEmpty()
@@ -123,21 +130,19 @@ class ExploreFragment : VMBaseFragment<ExploreViewModel>(R.layout.fragment_explo
         })
     }
 
-    private fun upGroupsMenu() {
-        groupsMenu?.let { subMenu ->
-            subMenu.removeGroup(R.id.menu_group_text)
-            groups.sortedWith { o1, o2 ->
-                o1.cnCompare(o2)
-            }.forEach {
-                subMenu.add(R.id.menu_group_text, Menu.NONE, Menu.NONE, it)
-            }
+    private fun upGroupsMenu() = groupsMenu?.let { subMenu ->
+        subMenu.removeGroup(R.id.menu_group_text)
+        groups.sortedWith { o1, o2 ->
+            o1.cnCompare(o2)
+        }.forEach {
+            subMenu.add(R.id.menu_group_text, Menu.NONE, Menu.NONE, it)
         }
     }
 
     override fun onCompatOptionsItemSelected(item: MenuItem) {
         super.onCompatOptionsItemSelected(item)
         if (item.groupId == R.id.menu_group_text) {
-            searchView.setQuery(item.title, true)
+            searchView.setQuery("group:${item.title}", true)
         }
     }
 

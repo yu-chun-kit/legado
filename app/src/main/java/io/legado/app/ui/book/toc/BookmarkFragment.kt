@@ -13,8 +13,9 @@ import io.legado.app.App
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.data.entities.Bookmark
-import io.legado.app.databinding.DialogEditTextBinding
+import io.legado.app.databinding.DialogBookmarkBinding
 import io.legado.app.databinding.FragmentBookmarkBinding
+import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.ATH
 import io.legado.app.ui.widget.recycler.VerticalDivider
@@ -76,34 +77,33 @@ class BookmarkFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragment_
     override fun onClick(bookmark: Bookmark) {
         val bookmarkData = Intent()
         bookmarkData.putExtra("index", bookmark.chapterIndex)
-        bookmarkData.putExtra("pageIndex", bookmark.pageIndex)
+        bookmarkData.putExtra("chapterPos", bookmark.chapterPos)
         activity?.setResult(Activity.RESULT_OK, bookmarkData)
         activity?.finish()
     }
 
     @SuppressLint("InflateParams")
     override fun onLongClick(bookmark: Bookmark) {
-        viewModel.book?.let { book ->
-            requireContext().alert(R.string.bookmark) {
-                val alertBinding = DialogEditTextBinding.inflate(layoutInflater)
-                message = book.name + " • " + bookmark.chapterName
-                customView {
-                    alertBinding.apply {
-                        editView.setHint(R.string.note_content)
-                        editView.setText(bookmark.content)
-                    }.root
-                }
-                yesButton {
-                    alertBinding.editView.text?.toString()?.let { editContent ->
-                        bookmark.content = editContent
-                        App.db.bookmarkDao.update(bookmark)
+        requireContext().alert(R.string.bookmark) {
+            message = bookmark.chapterName
+            val alertBinding = DialogBookmarkBinding.inflate(layoutInflater).apply {
+                editBookText.setText(bookmark.bookText)
+                editView.setText(bookmark.content)
+            }
+            customView = alertBinding.root
+            yesButton {
+                alertBinding.apply {
+                    Coroutine.async {
+                        bookmark.bookText = editBookText.text.toString()
+                        bookmark.content = editView.text.toString()
+                        App.db.bookmarkDao.insert(bookmark)
                     }
                 }
-                noButton()
-                neutralButton(R.string.delete) {
-                    App.db.bookmarkDao.delete(bookmark)
-                }
-            }.show().requestInputMethod()
-        }
+            }
+            noButton()
+            neutralButton(R.string.delete) {
+                App.db.bookmarkDao.delete(bookmark)
+            }
+        }.show().requestInputMethod()
     }
 }

@@ -5,7 +5,6 @@ import android.view.*
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.FragmentManager
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.App
@@ -85,10 +84,10 @@ class ChangeSourceDialog : BaseDialogFragment(),
         binding.toolBar.inflateMenu(R.menu.change_source)
         binding.toolBar.menu.applyTint(requireContext())
         binding.toolBar.setOnMenuItemClickListener(this)
-        binding.toolBar.menu.findItem(R.id.menu_load_info)?.isChecked =
-            AppConfig.changeSourceLoadInfo
-        binding.toolBar.menu.findItem(R.id.menu_load_toc)?.isChecked = AppConfig.changeSourceLoadToc
-
+        binding.toolBar.menu.findItem(R.id.menu_load_info)
+            ?.isChecked = AppConfig.changeSourceLoadInfo
+        binding.toolBar.menu.findItem(R.id.menu_load_toc)
+            ?.isChecked = AppConfig.changeSourceLoadToc
     }
 
     private fun initRecyclerView() {
@@ -145,9 +144,7 @@ class ChangeSourceDialog : BaseDialogFragment(),
             binding.toolBar.menu.applyTint(requireContext())
         })
         viewModel.searchBooksLiveData.observe(viewLifecycleOwner, {
-            val diffResult = DiffUtil.calculateDiff(DiffCallBack(adapter.getItems(), it))
             adapter.setItems(it)
-            diffResult.dispatchUpdatesTo(adapter)
         })
         App.db.bookSourceDao.liveGroupEnabled().observe(this, {
             groups.clear()
@@ -208,21 +205,24 @@ class ChangeSourceDialog : BaseDialogFragment(),
      */
     private fun upGroupMenu() {
         val menu: Menu = binding.toolBar.menu
-        val selectedGroup = getPrefString("searchGroup") ?: ""
+        val selectedGroup = getPrefString("searchGroup")
         menu.removeGroup(R.id.source_group)
-        var item = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, R.string.all_source)
-        if (selectedGroup == "") {
-            item?.isChecked = true
-        }
+        val allItem = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, R.string.all_source)
+        var hasSelectedGroup = false
         groups.sortedWith { o1, o2 ->
             o1.cnCompare(o2)
-        }.map {
-            item = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, it)
-            if (it == selectedGroup) {
-                item.isChecked = true
+        }.forEach { group ->
+            menu.add(R.id.source_group, Menu.NONE, Menu.NONE, group)?.let {
+                if (group == selectedGroup) {
+                    it.isChecked = true
+                    hasSelectedGroup = true
+                }
             }
         }
         menu.setGroupCheckable(R.id.source_group, true, true)
+        if (!hasSelectedGroup) {
+            allItem.isChecked = true
+        }
     }
 
     interface CallBack {

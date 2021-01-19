@@ -5,7 +5,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.view.ViewGroup
 import io.legado.app.base.adapter.ItemViewHolder
-import io.legado.app.base.adapter.SimpleRecyclerAdapter
+import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.ItemFontBinding
 import io.legado.app.utils.DocItem
 import io.legado.app.utils.RealPathUtil
@@ -16,7 +16,7 @@ import org.jetbrains.anko.toast
 import java.io.File
 
 class FontAdapter(context: Context, val callBack: CallBack) :
-    SimpleRecyclerAdapter<DocItem, ItemFontBinding>(context) {
+    RecyclerAdapter<DocItem, ItemFontBinding>(context) {
 
     override fun getViewBinding(parent: ViewGroup): ItemFontBinding {
         return ItemFontBinding.inflate(inflater, parent, false)
@@ -29,7 +29,7 @@ class FontAdapter(context: Context, val callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         with(binding) {
-            try {
+            kotlin.runCatching {
                 val typeface: Typeface? = if (item.isContentPath) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.contentResolver
@@ -44,9 +44,9 @@ class FontAdapter(context: Context, val callBack: CallBack) :
                     Typeface.createFromFile(item.uri.toString())
                 }
                 tvFont.typeface = typeface
-            } catch (e: Exception) {
-                e.printStackTrace()
-                context.toast("Read ${item.name} Error: ${e.localizedMessage}")
+            }.onFailure {
+                it.printStackTrace()
+                context.toast("Read ${item.name} Error: ${it.localizedMessage}")
             }
             tvFont.text = item.name
             root.onClick { callBack.onClick(item) }

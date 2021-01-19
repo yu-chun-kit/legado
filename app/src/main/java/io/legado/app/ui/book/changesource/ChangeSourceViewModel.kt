@@ -66,11 +66,9 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
             upAdapter()
             App.db.searchBookDao.getChangeSourceSearch(name, author, searchGroup).let {
                 searchBooks.addAll(it)
+                searchBooksLiveData.postValue(searchBooks.toList())
                 if (it.size <= 1) {
-                    upAdapter()
                     startSearch()
-                } else {
-                    upAdapter()
                 }
             }
         }
@@ -85,11 +83,12 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
             searchBooksLiveData.postValue(books.sortedBy { it.originOrder })
         } else {
             handler.removeCallbacks(sendRunnable)
-            handler.postDelayed(sendRunnable, 500 - System.currentTimeMillis() + postTime)
+            handler.postDelayed(sendRunnable, 500)
         }
     }
 
     private fun searchFinish(searchBook: SearchBook) {
+        if (searchBooks.contains(searchBook)) return
         App.db.searchBookDao.insert(searchBook)
         if (screenKey.isEmpty()) {
             searchBooks.add(searchBook)
@@ -101,8 +100,11 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
 
     private fun startSearch() {
         execute {
+            App.db.searchBookDao.clear(name, author)
+            searchBooks.clear()
+            upAdapter()
             bookSourceList.clear()
-            if (searchGroup.isNullOrBlank()) {
+            if (searchGroup.isBlank()) {
                 bookSourceList.addAll(App.db.bookSourceDao.allEnabled)
             } else {
                 bookSourceList.addAll(App.db.bookSourceDao.getEnabledByGroup(searchGroup))
@@ -123,10 +125,9 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
             searchIndex++
         }
         val source = bookSourceList[searchIndex]
-        val variableBook = SearchBook()
         val webBook = WebBook(source)
         val task = webBook
-            .searchBook(name, variableBook = variableBook, scope = this, context = searchPool!!)
+            .searchBook(this, name, context = searchPool!!)
             .timeout(60000L)
             .onSuccess(IO) {
                 it.forEach { searchBook ->
@@ -140,7 +141,6 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
                         } else {
                             searchFinish(searchBook)
                         }
-                        return@onSuccess
                     }
                 }
             }
@@ -162,7 +162,7 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     private fun loadBookInfo(webBook: WebBook, book: Book) {
-        webBook.getBookInfo(book, this)
+        webBook.getBookInfo(this, book)
             .onSuccess {
                 if (context.getPrefBoolean(PreferKey.changeSourceLoadToc)) {
                     loadBookToc(webBook, book)
@@ -178,7 +178,7 @@ class ChangeSourceViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     private fun loadBookToc(webBook: WebBook, book: Book) {
-        webBook.getChapterList(book, this)
+        webBook.getChapterList(this, book)
             .onSuccess(IO) { chapters ->
                 if (chapters.isNotEmpty()) {
                     book.latestChapterTitle = chapters.last().title

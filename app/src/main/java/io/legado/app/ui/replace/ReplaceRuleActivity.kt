@@ -11,7 +11,6 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.LiveData
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.App
@@ -55,6 +54,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     private val importRequestCode = 132
     private val exportRequestCode = 65
     private lateinit var adapter: ReplaceRuleAdapter
+    private lateinit var searchView: SearchView
     private var groups = hashSetOf<String>()
     private var groupMenu: SubMenu? = null
     private var replaceRuleLiveData: LiveData<List<ReplaceRule>>? = null
@@ -65,6 +65,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
+        searchView = binding.titleBar.findViewById(R.id.search_view)
         initRecyclerView()
         initSearchView()
         initSelectActionView()
@@ -92,7 +93,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         val itemTouchCallback = ItemTouchCallback(adapter)
         itemTouchCallback.isCanDrag = true
         val dragSelectTouchHelper: DragSelectTouchHelper =
-            DragSelectTouchHelper(adapter.initDragSelectTouchHelperCallback()).setSlideArea(16, 50)
+            DragSelectTouchHelper(adapter.dragSelectCallback).setSlideArea(16, 50)
         dragSelectTouchHelper.attachToRecyclerView(binding.recyclerView)
         // When this page is opened, it is in selection mode
         dragSelectTouchHelper.activeSlideSelect()
@@ -102,13 +103,11 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
 
     private fun initSearchView() {
-        binding.titleBar.findViewById<SearchView>(R.id.search_view).let {
-            ATH.setTint(it, primaryTextColor)
-            it.onActionViewExpanded()
-            it.queryHint = getString(R.string.replace_purify_search)
-            it.clearFocus()
-            it.setOnQueryTextListener(this)
-        }
+        ATH.setTint(searchView, primaryTextColor)
+        searchView.onActionViewExpanded()
+        searchView.queryHint = getString(R.string.replace_purify_search)
+        searchView.clearFocus()
+        searchView.setOnQueryTextListener(this)
     }
 
     override fun selectAll(selectAll: Boolean) {
@@ -141,24 +140,29 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         }.show()
     }
 
-    private fun observeReplaceRuleData(key: String? = null) {
+    private fun observeReplaceRuleData(searchKey: String? = null) {
         dataInit = false
         replaceRuleLiveData?.removeObservers(this)
-        replaceRuleLiveData = if (key.isNullOrEmpty()) {
-            App.db.replaceRuleDao.liveDataAll()
-        } else {
-            App.db.replaceRuleDao.liveDataSearch(key)
-        }
-        replaceRuleLiveData?.observe(this, {
-            if (dataInit) {
-                setResult(Activity.RESULT_OK)
+        replaceRuleLiveData = when {
+            searchKey.isNullOrEmpty() -> {
+                App.db.replaceRuleDao.liveDataAll()
             }
-            val diffResult =
-                DiffUtil.calculateDiff(DiffCallBack(ArrayList(adapter.getItems()), it))
-            adapter.setItems(it, diffResult)
-            dataInit = true
-            upCountView()
-        })
+            searchKey.startsWith("group:") -> {
+                val key = searchKey.substringAfter("group:")
+                App.db.replaceRuleDao.liveDataGroupSearch("%$key%")
+            }
+            else -> {
+                App.db.replaceRuleDao.liveDataSearch("%$searchKey%")
+            }
+        }.apply {
+            observe(this@ReplaceRuleActivity, {
+                if (dataInit) {
+                    setResult(Activity.RESULT_OK)
+                }
+                adapter.setItems(it, adapter.diffItemCallBack)
+                dataInit = true
+            })
+        }
     }
 
     private fun observeGroupData() {
@@ -183,8 +187,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
             R.id.menu_import_source_local -> FilePicker
                 .selectFile(this, importRequestCode, allowExtensions = arrayOf("txt", "json"))
             else -> if (item.groupId == R.id.replace_group) {
-                binding.titleBar.findViewById<SearchView>(R.id.search_view)
-                    .setQuery(item.title, true)
+                searchView.setQuery("group:${item.title}", true)
             }
         }
         return super.onCompatOptionsItemSelected(item)
@@ -237,7 +240,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
 
     override fun onQueryTextChange(newText: String?): Boolean {
-        observeReplaceRuleData("%$newText%")
+        observeReplaceRuleData(newText)
         return false
     }
 
@@ -250,13 +253,13 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         when (requestCode) {
             importRequestCode -> if (resultCode == Activity.RESULT_OK) {
                 data?.data?.let { uri ->
-                    try {
+                    kotlin.runCatching {
                         uri.readText(this)?.let {
                             val dataKey = IntentDataHelp.putData(it)
                             startActivity<ImportReplaceRuleActivity>("dataKey" to dataKey)
                         }
-                    } catch (e: Exception) {
-                        toast("readTextError:${e.localizedMessage}")
+                    }.onFailure {
+                        toast("readTextError:${it.localizedMessage}")
                     }
                 }
             }
@@ -284,7 +287,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     override fun upCountView() {
         binding.selectActionBar.upCountView(
             adapter.getSelection().size,
-            adapter.getActualItemCount()
+            adapter.itemCount
         )
     }
 

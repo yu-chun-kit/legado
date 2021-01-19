@@ -2,6 +2,7 @@ package io.legado.app.help
 
 import io.legado.app.App
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -45,10 +46,29 @@ object DefaultData {
         GSON.fromJsonArray<ThemeConfig.Config>(json)!!
     }
 
+    val rssSources by lazy {
+        val json = String(
+            App.INSTANCE.assets.open("defaultData${File.separator}rssSources.json")
+                .readBytes()
+        )
+        GSON.fromJsonArray<RssSource>(json)!!
+    }
+
+    fun importDefaultHttpTTS() {
+        App.db.httpTTSDao.deleteDefault()
+        httpTTS.let {
+            App.db.httpTTSDao.insert(*it.toTypedArray())
+        }
+    }
+
     fun importDefaultTocRules() {
         App.db.txtTocRule.deleteDefault()
         txtTocRules.let {
             App.db.txtTocRule.insert(*it.toTypedArray())
         }
+    }
+
+    fun importDefaultRssSources() {
+        App.db.rssSourceDao.insert(*rssSources.toTypedArray())
     }
 }

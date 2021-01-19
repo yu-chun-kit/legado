@@ -20,7 +20,7 @@ import androidx.appcompat.view.menu.MenuItemImpl
 import androidx.core.view.isVisible
 import io.legado.app.R
 import io.legado.app.base.adapter.ItemViewHolder
-import io.legado.app.base.adapter.SimpleRecyclerAdapter
+import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.ItemTextBinding
 import io.legado.app.databinding.PopupActionMenuBinding
 import io.legado.app.service.BaseReadAloudService
@@ -89,7 +89,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
     }
 
     inner class Adapter(context: Context) :
-        SimpleRecyclerAdapter<MenuItemImpl, ItemTextBinding>(context) {
+        RecyclerAdapter<MenuItemImpl, ItemTextBinding>(context) {
 
         override fun getViewBinding(parent: ViewGroup): ItemTextBinding {
             return ItemTextBinding.inflate(inflater, parent, false)
@@ -130,7 +130,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
                 readAloud(callBack.selectedText)
             }
             R.id.menu_browser -> {
-                try {
+                kotlin.runCatching {
                     val intent = if (callBack.selectedText.isAbsUrl()) {
                         Intent(Intent.ACTION_VIEW).apply {
                             data = Uri.parse(callBack.selectedText)
@@ -141,9 +141,9 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
                         }
                     }
                     context.startActivity(intent)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    context.toast(e.localizedMessage ?: "ERROR")
+                }.onFailure {
+                    it.printStackTrace()
+                    context.toast(it.localizedMessage ?: "ERROR")
                 }
             }
             else -> item.intent?.let {
@@ -210,7 +210,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
      */
     @RequiresApi(Build.VERSION_CODES.M)
     private fun onInitializeMenu(menu: Menu) {
-        try {
+        kotlin.runCatching {
             var menuItemOrder = 100
             for (resolveInfo in getSupportedActivities()) {
                 menu.add(
@@ -218,8 +218,8 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
                     menuItemOrder++, resolveInfo.loadLabel(context.packageManager)
                 ).intent = createProcessTextIntentForResolveInfo(resolveInfo)
             }
-        } catch (e: Exception) {
-            context.toast("获取文字操作菜单出错:${e.localizedMessage}")
+        }.onFailure {
+            context.toast("获取文字操作菜单出错:${it.localizedMessage}")
         }
     }
 
